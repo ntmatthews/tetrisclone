@@ -1,0 +1,188 @@
+import pygame
+import random
+
+# Initialize pygame
+pygame.init()
+
+# Define constants
+SCREEN_WIDTH, SCREEN_HEIGHT = 300, 600
+BLOCK_SIZE = 30
+FPS = 10
+
+# Define colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+CYAN = (0, 255, 255)
+MAGENTA = (255, 0, 255)
+YELLOW = (255, 255, 0)
+ORANGE = (255, 165, 0)
+
+# Shapes of Tetriminos (I, O, T, S, Z, J, L)
+SHAPES = [
+    [[1, 1, 1, 1]],  # I
+    [[1, 1],
+     [1, 1]],  # O
+    [[0, 1, 0],
+     [1, 1, 1]],  # T
+    [[0, 1, 1],
+     [1, 1, 0]],  # S
+    [[1, 1, 0],
+     [0, 1, 1]],  # Z
+    [[1, 0, 0],
+     [1, 1, 1]],  # J
+    [[0, 0, 1],
+     [1, 1, 1]],  # L
+]
+
+# Colors for each shape
+SHAPE_COLORS = [CYAN, YELLOW, MAGENTA, GREEN, RED, BLUE, ORANGE]
+
+# Define the screen
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Tetris")
+
+# Class for the Tetris game
+class Tetris:
+    def __init__(self):
+        self.board = [[0 for _ in range(SCREEN_WIDTH // BLOCK_SIZE)] for _ in range(SCREEN_HEIGHT // BLOCK_SIZE)]
+        self.game_over = False
+        self.current_tetrimino = None
+        self.current_position = None
+        self.score = 0
+
+    def new_tetrimino(self):
+        shape_index = random.randint(0, len(SHAPES) - 1)
+        self.current_tetrimino = SHAPES[shape_index]
+        self.current_color = SHAPE_COLORS[shape_index]
+        self.current_position = [0, SCREEN_WIDTH // BLOCK_SIZE // 2 - len(self.current_tetrimino[0]) // 2]
+
+    def rotate(self):
+        if self.game_over:
+            return
+
+        self.current_tetrimino = [list(row) for row in zip(*self.current_tetrimino[::-1])]
+
+        if self.check_collision():
+            self.current_tetrimino = [list(row) for row in zip(*self.current_tetrimino[::-1])][::-1]
+
+    def check_collision(self):
+        for i, row in enumerate(self.current_tetrimino):
+            for j, cell in enumerate(row):
+                if cell:
+                    x = self.current_position[1] + j
+                    y = self.current_position[0] + i
+                    if x < 0 or x >= SCREEN_WIDTH // BLOCK_SIZE or y >= SCREEN_HEIGHT // BLOCK_SIZE:
+                        return True
+                    if y >= 0 and self.board[y][x]:
+                        return True
+        return False
+
+    def drop(self):
+        if self.game_over:
+            return
+
+        self.current_position[0] += 1
+        if self.check_collision():
+            self.current_position[0] -= 1
+            self.lock_tetrimino()
+            self.clear_lines()
+            self.new_tetrimino()
+            if self.check_collision():
+                self.game_over = True
+
+    def move_left(self):
+        if self.game_over:
+            return
+
+        self.current_position[1] -= 1
+        if self.check_collision():
+            self.current_position[1] += 1
+
+    def move_right(self):
+        if self.game_over:
+            return
+
+        self.current_position[1] += 1
+        if self.check_collision():
+            self.current_position[1] -= 1
+
+    def lock_tetrimino(self):
+        for i, row in enumerate(self.current_tetrimino):
+            for j, cell in enumerate(row):
+                if cell:
+                    x = self.current_position[1] + j
+                    y = self.current_position[0] + i
+                    self.board[y][x] = self.current_color
+
+    def clear_lines(self):
+        full_lines = []
+        for y, row in enumerate(self.board):
+            if all(cell != 0 for cell in row):
+                full_lines.append(y)
+
+        for line in full_lines:
+            self.board.pop(line)
+            self.board.insert(0, [0 for _ in range(SCREEN_WIDTH // BLOCK_SIZE)])
+
+        self.score += len(full_lines)
+
+    def draw(self):
+        screen.fill(BLACK)
+
+        # Draw the board
+        for y, row in enumerate(self.board):
+            for x, cell in enumerate(row):
+                if cell:
+                    pygame.draw.rect(screen, cell, (x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+
+        # Draw the current tetrimino
+        for i, row in enumerate(self.current_tetrimino):
+            for j, cell in enumerate(row):
+                if cell:
+                    pygame.draw.rect(screen, self.current_color, ((self.current_position[1] + j) * BLOCK_SIZE,
+                                                                   (self.current_position[0] + i) * BLOCK_SIZE,
+                                                                   BLOCK_SIZE, BLOCK_SIZE))
+
+        # Draw score
+        font = pygame.font.SysFont("Arial", 24)
+        score_text = font.render(f"Score: {self.score}", True, WHITE)
+        screen.blit(score_text, (10, 10))
+
+        # Game over screen
+        if self.game_over:
+            game_over_text = font.render("GAME OVER", True, RED)
+            screen.blit(game_over_text, (SCREEN_WIDTH // 2 - game_over_text.get_width() // 2, SCREEN_HEIGHT // 2 - 30))
+
+        pygame.display.flip()
+
+# Main game loop
+def main():
+    clock = pygame.time.Clock()
+    game = Tetris()
+    game.new_tetrimino()
+
+    while not game.game_over:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game.game_over = True
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    game.move_left()
+                elif event.key == pygame.K_RIGHT:
+                    game.move_right()
+                elif event.key == pygame.K_DOWN:
+                    game.drop()
+                elif event.key == pygame.K_UP:
+                    game.rotate()
+
+        game.drop()
+        game.draw()
+        clock.tick(FPS)
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
