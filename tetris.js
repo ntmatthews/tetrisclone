@@ -3,58 +3,58 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK_SIZE = 30;
 const COLORS = [
-    '#FF0D72', // I - Cyan
-    '#0DC2FF', // O - Yellow
-    '#0DFF72', // T - Purple
-    '#F538FF', // S - Green
-    '#FF8E0D', // Z - Red
-    '#FFE138', // J - Blue
-    '#3877FF'  // L - Orange
+    '#4ECDC4', // Teal
+    '#FF6B6B', // Coral
+    '#FFE66D', // Yellow
+    '#1A535C', // Dark Teal
+    '#7B68EE', // Medium Slate Blue
+    '#F7B267', // Sandy Orange
+    '#2EC4B6'  // Turquoise
 ];
 
-// Tetromino shapes
+// Block shapes - modified to be different from traditional tetrominos
 const SHAPES = [
-    // I
+    // Cross
     [
-        [0, 0, 0, 0],
-        [1, 1, 1, 1],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0]
+        [0, 1, 0],
+        [1, 1, 1],
+        [0, 1, 0]
     ],
-    // O
+    // Square Plus
     [
         [1, 1],
-        [1, 1]
+        [1, 1],
+        [1, 0]
     ],
-    // T
+    // Triangle
     [
         [0, 1, 0],
         [1, 1, 1],
         [0, 0, 0]
     ],
-    // S
+    // Zigzag
     [
         [0, 1, 1],
         [1, 1, 0],
         [0, 0, 0]
     ],
-    // Z
+    // Reverse Zigzag
     [
         [1, 1, 0],
         [0, 1, 1],
         [0, 0, 0]
     ],
-    // J
+    // L-shape
     [
         [1, 0, 0],
-        [1, 1, 1],
-        [0, 0, 0]
+        [1, 0, 0],
+        [1, 1, 0]
     ],
-    // L
+    // Reverse L-shape
     [
         [0, 0, 1],
-        [1, 1, 1],
-        [0, 0, 0]
+        [0, 0, 1],
+        [0, 1, 1]
     ]
 ];
 
@@ -94,6 +94,7 @@ class GameState {
         this.lastTime = 0;
         this.piece = this.randomPiece();
         this.nextPiece = this.randomPiece();
+        this.gravity = 1; // New mechanic: gravity level
     }
 
     createEmptyGrid() {
@@ -107,11 +108,16 @@ class GameState {
         // Create a deep copy of the shape
         const pieceCopy = JSON.parse(JSON.stringify(shape));
         
+        // New mechanic: chance of special piece (darker color)
+        const isSpecial = Math.random() < 0.2;
+        
         return {
             shape: pieceCopy,
             color: COLORS[shapeIndex],
             x: Math.floor(COLS / 2) - Math.floor(pieceCopy[0].length / 2),
-            y: 0
+            y: 0,
+            isSpecial: isSpecial, // Special blocks are harder to clear
+            rotationsLeft: isSpecial ? 2 : Infinity // Special blocks have limited rotations
         };
     }
 
@@ -141,6 +147,11 @@ class GameState {
     }
 
     rotate() {
+        // New mechanic: limited rotations for special pieces
+        if (this.piece.rotationsLeft <= 0) {
+            return;
+        }
+        
         const originalShape = this.piece.shape;
         
         // Create a deep copy before modifying
@@ -159,13 +170,15 @@ class GameState {
         // Undo rotation if it causes collision
         if (this.collide()) {
             this.piece.shape = originalShape;
+        } else if (this.piece.isSpecial) {
+            this.piece.rotationsLeft--;
         }
     }
 
     moveDown() {
-        this.piece.y++;
+        this.piece.y += this.gravity;
         if (this.collide()) {
-            this.piece.y--;
+            this.piece.y -= this.gravity;
             this.lockPiece();
             this.clearLines();
             this.piece = this.nextPiece;
@@ -203,14 +216,17 @@ class GameState {
     }
 
     lockPiece() {
-        const { shape, x, y, color } = this.piece;
+        const { shape, x, y, color, isSpecial } = this.piece;
         
         shape.forEach((row, rowIndex) => {
             row.forEach((value, colIndex) => {
                 if (value !== 0) {
                     const boardY = y + rowIndex;
                     if (boardY >= 0) { // Only lock visible part
-                        this.grid[boardY][x + colIndex] = color;
+                        this.grid[boardY][x + colIndex] = {
+                            color: color,
+                            isSpecial: isSpecial // Store whether this is a special block
+                        };
                     }
                 }
             });
@@ -221,14 +237,34 @@ class GameState {
         let linesCleared = 0;
         
         for (let row = ROWS - 1; row >= 0; row--) {
-            if (this.grid[row].every(cell => cell !== 0)) {
-                // Remove the row and add an empty one at the top
-                this.grid.splice(row, 1);
-                this.grid.unshift(Array(COLS).fill(0));
-                linesCleared++;
-                
-                // Since we removed a row, we need to check the same row index again
-                row++;
+            // Check if line can be cleared (all cells filled and no special blocks)
+            const canClear = this.grid[row].every(cell => cell !== 0);
+            
+            // New mechanic: special blocks are harder to clear
+            const hasSpecialBlock = this.grid[row].some(cell => cell && cell.isSpecial);
+            
+            if (canClear) {
+                if (!hasSpecialBlock) {
+                    // Remove the row and add an empty one at the top
+                    this.grid.splice(row, 1);
+                    this.grid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    
+                    // Since we removed a row, we need to check the same row index again
+                    row++;
+                } else {
+                    // For special blocks, we need to clear them twice
+                    // First time just makes them normal blocks
+                    this.grid[row] = this.grid[row].map(cell => {
+                        if (cell && cell.isSpecial) {
+                            return {
+                                color: cell.color,
+                                isSpecial: false
+                            };
+                        }
+                        return cell;
+                    });
+                }
             }
         }
         
@@ -244,6 +280,9 @@ class GameState {
                 this.level = newLevel;
                 // Speed up the game as level increases
                 this.dropInterval = Math.max(100, 1000 - (this.level - 1) * 100);
+                
+                // New mechanic: increase gravity as levels go up
+                this.gravity = Math.min(3, 1 + Math.floor(this.level / 5));
             }
             
             this.updateScore();
@@ -284,8 +323,8 @@ class GameRenderer {
         nextCtx.scale(1, 1);
     }
 
-    drawBlock(x, y, color, context = ctx) {
-        context.fillStyle = color;
+    drawBlock(x, y, color, isSpecial = false, context = ctx) {
+        context.fillStyle = isSpecial ? this.darkenColor(color) : color;
         context.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
         
         // Inner border for 3D effect
@@ -307,6 +346,34 @@ class GameRenderer {
             BLOCK_SIZE, 
             BLOCK_SIZE
         );
+        
+        // Add special marker for special blocks
+        if (isSpecial) {
+            context.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            context.beginPath();
+            context.arc(
+                x * BLOCK_SIZE + BLOCK_SIZE / 2,
+                y * BLOCK_SIZE + BLOCK_SIZE / 2,
+                BLOCK_SIZE / 6,
+                0,
+                Math.PI * 2
+            );
+            context.fill();
+        }
+    }
+    
+    // Helper function to darken colors for special blocks
+    darkenColor(color) {
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        
+        const darkenFactor = 0.7;
+        const dr = Math.floor(r * darkenFactor);
+        const dg = Math.floor(g * darkenFactor);
+        const db = Math.floor(b * darkenFactor);
+        
+        return `#${dr.toString(16).padStart(2, '0')}${dg.toString(16).padStart(2, '0')}${db.toString(16).padStart(2, '0')}`;
     }
 
     drawGrid() {
@@ -342,9 +409,9 @@ class GameRenderer {
         
         // Draw the locked pieces
         this.gameState.grid.forEach((row, y) => {
-            row.forEach((color, x) => {
-                if (color) {
-                    this.drawBlock(x, y, color);
+            row.forEach((cell, x) => {
+                if (cell) {
+                    this.drawBlock(x, y, cell.color, cell.isSpecial);
                 }
             });
         });
@@ -354,12 +421,12 @@ class GameRenderer {
     }
 
     drawPiece() {
-        const { shape, x, y, color } = this.gameState.piece;
+        const { shape, x, y, color, isSpecial } = this.gameState.piece;
         
         shape.forEach((row, rowIndex) => {
             row.forEach((value, colIndex) => {
                 if (value !== 0) {
-                    this.drawBlock(x + colIndex, y + rowIndex, color);
+                    this.drawBlock(x + colIndex, y + rowIndex, color, isSpecial);
                 }
             });
         });
@@ -373,13 +440,13 @@ class GameRenderer {
         nextCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         nextCtx.fillRect(0, 0, nextPieceCanvas.width, nextPieceCanvas.height);
         
-        const { shape, color } = this.gameState.nextPiece;
+        const { shape, color, isSpecial } = this.gameState.nextPiece;
         const offset = (nextPieceCanvas.width / BLOCK_SIZE - shape[0].length) / 2;
         
         shape.forEach((row, rowIndex) => {
             row.forEach((value, colIndex) => {
                 if (value !== 0) {
-                    this.drawBlock(offset + colIndex, offset + rowIndex, color, nextCtx);
+                    this.drawBlock(offset + colIndex, offset + rowIndex, color, isSpecial, nextCtx);
                 }
             });
         });

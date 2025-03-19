@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris Game</title>
+    <title>BlockCascade Game</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
             <div class="score-container">
                 <div>Score: <span id="score">0</span></div>
                 <div>Level: <span id="level">1</span></div>
-                <div>Lines: <span id="lines">0</span></div>
+                <div>Blocks: <span id="lines">0</span></div>
             </div>
             <div class="controls-info">
                 <h2>Controls</h2>
@@ -29,14 +29,14 @@
         </div>
 
         <div class="next-piece-container">
-            <h3>Next Piece</h3>
+            <h3>Next Shape</h3>
             <canvas id="next-piece"></canvas>
         </div>
     </div>
 
     <div class="modal" id="start-modal">
         <div class="modal-content">
-            <h2>TETRIS</h2>
+            <h2>BLOCKCASCADE</h2>
             <button id="start-button">Start Game</button>
         </div>
     </div>
@@ -56,6 +56,6 @@
         </div>
     </div>
 
-    <script src="tetris.js" type="module"></script>
+    <script src="blockcascade.js" type="module"></script>
 </body>
 </html>
