@@ -3,56 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlockCascade Game</title>
+    <title>RETRO TETRIS</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="game-container">
         <div class="game-header">
             <div class="score-container">
-                <div>Score: <span id="score">0</span></div>
-                <div>Level: <span id="level">1</span></div>
-                <div>Blocks: <span id="lines">0</span></div>
+                <div>SCORE: <span id="score">0</span></div>
+                <div>LEVEL: <span id="level">1</span></div>
+                <div>LINES: <span id="lines">0</span></div>
             </div>
             <div class="controls-info">
-                <h2>Controls</h2>
-                <p>↑ Rotate</p>
-                <p>← → Move</p>
-                <p>↓ Soft Drop</p>
-                <p>Space Hard Drop</p>
-                <p>P Pause</p>
+                <h2>CONTROLS</h2>
+                <p>↑ ROTATE</p>
+                <p>← → MOVE</p>
+                <p>↓ SOFT DROP</p>
+                <p>SPACE HARD DROP</p>
+                <p>C HOLD PIECE</p>
+                <p>P PAUSE</p>
             </div>
         </div>
 
         <div class="game-board-container">
             <canvas id="game-board"></canvas>
+            <div class="timer-bar" id="lock-timer"></div>
         </div>
 
         <div class="next-piece-container">
-            <h3>Next Shape</h3>
+            <h3>NEXT</h3>
             <canvas id="next-piece"></canvas>
+        </div>
+        
+        <div class="hold-piece-container">
+            <h3>HOLD</h3>
+            <canvas id="hold-piece"></canvas>
         </div>
     </div>
 
     <div class="modal" id="start-modal">
         <div class="modal-content">
-            <h2>BLOCKCASCADE</h2>
-            <button id="start-button">Start Game</button>
+            <h2>RETRO TETRIS</h2>
+            <button id="start-button">START GAME</button>
         </div>
     </div>
 
     <div class="modal" id="pause-modal">
         <div class="modal-content">
             <h2>GAME PAUSED</h2>
-            <button id="resume-button">Resume</button>
+            <button id="resume-button">RESUME</button>
         </div>
     </div>
 
     <div class="modal" id="game-over-modal">
         <div class="modal-content">
             <h2>GAME OVER</h2>
-            <div class="final-score">Score: <span id="final-score">0</span></div>
-            <button id="restart-button">Play Again</button>
+            <div class="final-score">SCORE: <span id="final-score">0</span></div>
+            <button id="restart-button">PLAY AGAIN</button>
         </div>
     </div>
 
